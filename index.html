@@ -519,18 +519,26 @@
                 });
             });
 
-            const mockClasses = [
+               const mockClasses = [
                 { day: 'Monday', period: 1, subject: 'Mathematics', teacher: 'Dr. Brijesh singh', room: 'Room 101' },
                 { day: 'Monday', period: 2, subject: 'Physics', teacher: 'Prof. Neha', room: 'Lab 201' },
                 { day: 'Monday', period: 4, subject: 'English', teacher: 'Ms. Brahmjot kaur', room: 'Room 102' },
+                { day: 'Monday', period: 5, subject: 'Data Structures', teacher: 'Ms. Navneet kaur', room: 'Room 101' },
+                { day: 'Monday', period: 6, subject: 'Python', teacher: 'Dr. Amandeep kaur', room: 'Lab 202' },
+                { day: 'Monday', period: 3, subject: 'C++', teacher: 'Dr. Manju goyal', room: 'Lab 201' },
                 { day: 'Tuesday', period: 1, subject: 'Chemistry', teacher: 'Dr. Shubham sharma', room: 'Lab 202' },
                 { day: 'Tuesday', period: 3, subject: 'Java', teacher: 'Dr. Kanchan sharma', room: 'Lab 201' },
+                { day: 'Tuesday', period: 4, subject: 'Web Development', teacher: 'Ms. Mudit', room: 'Lab 201' },
+                { day: 'Tuesday', period: 2, subject: 'Environmental Science', teacher: 'Dr. Jayishnu Singla', room: 'Room 103' },
                 { day: 'Tuesday', period: 5, subject: 'Environmental Science', teacher: 'Dr. Jayishnu Singla', room: 'Room 103' },
                 { day: 'Wednesday', period: 2, subject: 'Mathematics', teacher: 'Dr. Brijesh singh', room: 'Room 101' },
                 { day: 'Wednesday', period: 5, subject: 'Physics', teacher: 'Prof. Neha', room: 'Lab 201' },
+                { day: 'Wednesday', period: 3, subject: 'C++', teacher: 'Dr. Manju goyal', room: 'Lab 201' },
+                { day: 'Wednesday', period: 4, subject: 'Java', teacher: 'Dr. Kanchan sharma', room: 'Lab 201' },
                 { day: 'Wednesday', period: 6, subject: 'Chemistry', teacher: 'Dr. Shubham sharma', room: 'Lab 202' },
                 { day: 'Thursday', period: 1, subject: 'English', teacher: 'Ms. Brahmjot kaur', room: 'Room 102' },
                 { day: 'Thursday', period: 3, subject: 'Python', teacher: 'Dr. Amandeep kaur', room: 'Lab 202' },
+                { day: 'Thursday', period: 2, subject: 'Environmental Science', teacher: 'Dr. Jayishnu Singla', room: 'Room 103' },
                 { day: 'Thursday', period: 4, subject: 'Web Development', teacher: 'Ms. Mudit', room: 'Lab 201' },
                 { day: 'Friday', period: 1, subject: 'Data Structures', teacher: 'Ms. Navneet kaur', room: 'Room 101' },
                 { day: 'Friday', period: 2, subject: 'C++', teacher: 'Dr. Manju goyal', room: 'Lab 201' },
@@ -538,6 +546,7 @@
                 { day: 'Friday', period: 5, subject: 'Mathematics', teacher: 'Dr. Brijesh singh', room: 'Room 101' }
 
             ];
+
 
             mockClasses.forEach(cls => {
                 timetable[cls.day][cls.period] = {
@@ -704,4 +713,5 @@
         });
     </script>
 </body>
+
 </html>
