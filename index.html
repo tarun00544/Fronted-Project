@@ -57,6 +57,9 @@
             background-color: #e3f2fd;
             transition: all 0.3s ease;
             cursor: move;
+            min-height: 80px;
+            padding: 10px;
+            margin: 2px;
         }
 
         .class-card:hover {
@@ -78,6 +81,7 @@
             justify-content: center;
             color: #6c757d;
             transition: all 0.3s ease;
+            margin: 2px;
         }
 
         .empty-slot.dragover {
@@ -132,6 +136,54 @@
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
             color: white;
+        }
+
+        .section-info {
+            background: linear-gradient(45deg, #f8f9fa, #e9ecef);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .timetable-grid {
+            overflow-x: auto;
+        }
+
+        .timetable-table {
+            min-width: 800px;
+        }
+
+        .time-cell {
+            width: 120px;
+            background-color: #f8f9fa;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .day-header {
+            background: var(--primary-gradient);
+            color: white;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .subject-card {
+            font-size: 0.85em;
+        }
+
+        .subject-name {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .teacher-name {
+            color: #7f8c8d;
+            font-size: 0.9em;
+        }
+
+        .room-name {
+            color: #e74c3c;
+            font-size: 0.8em;
         }
     </style>
 </head>
@@ -234,6 +286,24 @@
                         </div>
                     </div>
 
+                    <!-- Section Info -->
+                    <div id="section-info" class="section-info d-none">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <strong>Section:</strong> <span id="info-section-name"></span>
+                            </div>
+                            <div class="col-md-3">
+                                <strong>Department:</strong> <span id="info-department"></span>
+                            </div>
+                            <div class="col-md-3">
+                                <strong>Year:</strong> <span id="info-year"></span>
+                            </div>
+                            <div class="col-md-3">
+                                <strong>Students:</strong> <span id="info-strength"></span>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Generated Timetable -->
                     <div id="timetable-container" class="d-none">
                         <div class="d-flex justify-content-between align-items-center mb-4">
@@ -242,7 +312,7 @@
                                 Total Classes: <span id="total-classes">0</span>
                             </div>
                         </div>
-                        <div id="timetable-grid"></div>
+                        <div id="timetable-grid" class="timetable-grid"></div>
                     </div>
                 </div>
             </div>
@@ -320,36 +390,61 @@
         let sections = [];
         let currentTimetable = {};
         let selectedSection = null;
-        let editMode = false;
-        let draggedItem = null;
+        let sectionTimetables = {}; // Store timetables for each section
 
         const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
         const periods = [1, 2, 3, 4, 5, 6, 7, 8];
+        const timeSlots = [
+            '9:00-10:00',
+            '10:00-10:55', 
+            '10:55-11:45',
+            '11:45-12:40',
+            '1:30-2:20',
+            '2:20-3:10',
+            '3:10-4:00',
+            '4:00-5:00'
+        ];
 
         // Initialize sample data
         function initializeSampleData() {
             subjects = [
-                { id: 1, name: 'Mathematics', code: 'MATH101', hours_per_week: 5, requires_lab: false },
-                { id: 2, name: 'Physics', code: 'PHY101', hours_per_week: 4, requires_lab: true },
-                { id: 3, name: 'English', code: 'ENG101', hours_per_week: 3, requires_lab: false },
-                { id: 4, name: 'Java', code: 'Jav101', hours_per_week: 4, requires_lab: true },
-                { id: 5, name: 'Python', code: 'Pyt101', hours_per_week: 5, requires_lab: true },
-                { id: 6, name: 'Data Structures', code: 'DS101', hours_per_week: 4, requires_lab: true },
-                { id: 7, name: 'Web Development', code: 'WEB101', hours_per_week: 3, requires_lab: true },
-                { id: 8, name: 'Environmental Science', code: 'EVS101', hours_per_week: 4, requires_lab: false }
+                { id: 1, name: 'Mathematics', code: 'MATH101', hours_per_week: 5, requires_lab: false, departments: ['Computer Science', 'Information Technology', 'Electronics', 'Mechanical'] },
+                { id: 2, name: 'Physics', code: 'PHY101', hours_per_week: 4, requires_lab: true, departments: ['Computer Science', 'Electronics', 'Mechanical'] },
+                { id: 3, name: 'English', code: 'ENG101', hours_per_week: 3, requires_lab: false, departments: ['Computer Science', 'Information Technology', 'Electronics', 'Mechanical', 'Civil'] },
+                { id: 4, name: 'Java Programming', code: 'JAVA101', hours_per_week: 4, requires_lab: true, departments: ['Computer Science', 'Information Technology'] },
+                { id: 5, name: 'Python Programming', code: 'PYT101', hours_per_week: 5, requires_lab: true, departments: ['Computer Science', 'Information Technology', 'Electronics', 'Mechanical'] },
+                { id: 6, name: 'Data Structures', code: 'DS101', hours_per_week: 4, requires_lab: true, departments: ['Computer Science', 'Information Technology'] },
+                { id: 7, name: 'Web Development', code: 'WEB101', hours_per_week: 3, requires_lab: true, departments: ['Computer Science', 'Information Technology'] },
+                { id: 8, name: 'Environmental Science', code: 'EVS101', hours_per_week: 2, requires_lab: false, departments: ['Computer Science', 'Information Technology', 'Electronics', 'Mechanical', 'Civil'] },
+                { id: 9, name: 'Digital Electronics', code: 'DE101', hours_per_week: 4, requires_lab: true, departments: ['Electronics'] },
+                { id: 10, name: 'Signal Processing', code: 'SP101', hours_per_week: 3, requires_lab: true, departments: ['Electronics'] },
+                { id: 11, name: 'Thermodynamics', code: 'TD101', hours_per_week: 4, requires_lab: false, departments: ['Mechanical'] },
+                { id: 12, name: 'Machine Design', code: 'MD101', hours_per_week: 3, requires_lab: true, departments: ['Mechanical'] },
+                { id: 13, name: 'Structural Engineering', code: 'SE101', hours_per_week: 4, requires_lab: false, departments: ['Civil'] },
+                { id: 14, name: 'Surveying', code: 'SUR101', hours_per_week: 3, requires_lab: true, departments: ['Civil'] },
+                { id: 15, name: 'Database Systems', code: 'DB101', hours_per_week: 4, requires_lab: true, departments: ['Computer Science', 'Information Technology'] },
+                { id: 16, name: 'Operating Systems', code: 'OS101', hours_per_week: 3, requires_lab: false, departments: ['Computer Science', 'Information Technology'] },
+                { id: 17, name: 'Computer Networks', code: 'CN101', hours_per_week: 4, requires_lab: true, departments: ['Computer Science', 'Information Technology'] },
+                { id: 18, name: 'Chemistry', code: 'CHEM101', hours_per_week: 4, requires_lab: true, departments: ['Computer Science', 'Electronics', 'Mechaical', 'Civil']}
             ];
 
             teachers = [
-                { id: 1, name: 'Dr. Brijesh singh', department: 'Mathematics' },
-                { id: 2, name: 'Prof. Neha', department: 'Physics' },
-                { id: 3, name: 'Dr. Shubham sharma', department: 'Chemistry' },
-                { id: 4, name: 'Ms. Brahmjot kaur', department: 'English' },
-                { id: 5, name: 'Dr. kanchan sharma', department: 'Java' },
-                { id: 6, name: 'Mr. Amandeep kaur', department: 'Python' },
-                { id: 7, name: 'Ms. Navneet kaur', department: 'Data Structures' },
-                { id: 8, name: 'Mr. Manju goyal', department: 'C++' },
-                { id: 9, name: 'Ms. Mudit ', department: 'Web Development' },
-                { id: 10, name: 'Dr. Jayishnu Singla', department: 'Environmental Science' }
+                { id: 1, name: 'Dr. Brijesh Singh', department: 'Mathematics', subjects: ['Mathematics'] },
+                { id: 2, name: 'Prof. Neha Sharma', department: 'Physics', subjects: ['Physics'] },
+                { id: 3, name: 'Dr. Shubham Sharma', department: 'Chemistry', subjects: ['Chemistry'] },
+                { id: 4, name: 'Ms. Brahmjot Kaur', department: 'English', subjects: ['English'] },
+                { id: 5, name: 'Dr. Kanchan Sharma', department: 'Computer Science', subjects: ['Java Programming', 'Data Structures'] },
+                { id: 6, name: 'Mr. Amandeep Singh', department: 'Computer Science', subjects: ['Python Programming', 'Web Development'] },
+                { id: 7, name: 'Ms. Navneet Kaur', department: 'Computer Science', subjects: ['Database Systems', 'Operating Systems'] },
+                { id: 8, name: 'Mr. Manju Goyal', department: 'Computer Science', subjects: ['Computer Networks'] },
+                { id: 9, name: 'Ms. Mudit Arora', department: 'Information Technology', subjects: ['Web Development', 'Database Systems'] },
+                { id: 10, name: 'Dr. Jayishnu Singla', department: 'Environmental Science', subjects: ['Environmental Science'] },
+                { id: 11, name: 'Prof. Rajesh Kumar', department: 'Electronics', subjects: ['Digital Electronics', 'Signal Processing'] },
+                { id: 12, name: 'Dr. Priya Mehta', department: 'Electronics', subjects: ['Digital Electronics'] },
+                { id: 13, name: 'Mr. Vikram Singh', department: 'Mechanical', subjects: ['Thermodynamics', 'Machine Design'] },
+                { id: 14, name: 'Dr. Sunita Jain', department: 'Mechanical', subjects: ['Machine Design'] },
+                { id: 15, name: 'Prof. Ravi Gupta', department: 'Civil', subjects: ['Structural Engineering', 'Surveying'] },
+                { id: 16, name: 'Ms. Kavya Patel', department: 'Civil', subjects: ['Surveying'] }
             ];
 
             rooms = [
@@ -383,7 +478,7 @@
                 { id: 10, name: 'CE-A', year: 1, department: 'Civil', strength: 28 },
                 { id: 11, name: 'CE-B', year: 2, department: 'Civil', strength: 32 }
             ];
-
+             
             updateStatCards();
             populateSectionSelect();
             renderDataLists();
@@ -391,11 +486,9 @@
 
         // Switch tabs
         function switchTab(tab) {
-            // Update active tab
             document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
             document.getElementById(tab + '-tab').classList.add('active');
 
-            // Show/hide content
             document.querySelectorAll('.tab-content').forEach(content => content.classList.add('d-none'));
             document.getElementById(tab + '-content').classList.remove('d-none');
 
@@ -418,99 +511,150 @@
             sections.forEach(section => {
                 const option = document.createElement('option');
                 option.value = section.id;
-                option.textContent = `${section.name} - ${section.department}`;
+                option.textContent = `${section.name} - ${section.department} (Year ${section.year})`;
                 select.appendChild(option);
             });
 
             select.addEventListener('change', function() {
                 selectedSection = this.value ? parseInt(this.value) : null;
+                if (selectedSection) {
+                    showSectionInfo();
+                    // Check if timetable already exists for this section
+                    if (sectionTimetables[selectedSection]) {
+                        displayTimetable(sectionTimetables[selectedSection]);
+                    } else {
+                        document.getElementById('timetable-container').classList.add('d-none');
+                    }
+                } else {
+                    hideSectionInfo();
+                }
             });
         }
 
-        // Render data lists
-        function renderDataLists() {
-            // Render subjects
-            const subjectsList = document.getElementById('subjects-list');
-            subjectsList.innerHTML = '';
-            subjects.forEach(subject => {
-                const item = document.createElement('div');
-                item.className = 'p-3 bg-light rounded mb-3';
-                item.innerHTML = `
-                    <div class="fw-bold">${subject.name}</div>
-                    <div class="text-muted small">${subject.code} • ${subject.hours_per_week}h/week</div>
-                    ${subject.requires_lab ? '<div class="text-primary small mt-1"><i class="fas fa-flask me-1"></i>Requires Lab</div>' : ''}
-                `;
-                subjectsList.appendChild(item);
-            });
-
-            // Render teachers
-            const teachersList = document.getElementById('teachers-list');
-            teachersList.innerHTML = '';
-            teachers.forEach(teacher => {
-                const item = document.createElement('div');
-                item.className = 'p-3 bg-light rounded mb-3';
-                item.innerHTML = `
-                    <div class="fw-bold">${teacher.name}</div>
-                    <div class="text-muted small">${teacher.department}</div>
-                `;
-                teachersList.appendChild(item);
-            });
-
-            // Render rooms
-            const roomsList = document.getElementById('rooms-list');
-            roomsList.innerHTML = '';
-            rooms.forEach(room => {
-                const item = document.createElement('div');
-                item.className = 'p-3 bg-light rounded mb-3';
-                item.innerHTML = `
-                    <div class="fw-bold">${room.name}</div>
-                    <div class="text-muted small">
-                        Capacity: ${room.capacity} • Type: ${room.room_type} • Building ${room.building}
-                    </div>
-                `;
-                roomsList.appendChild(item);
-            });
-
-            // Render sections
-            const sectionsList = document.getElementById('sections-list');
-            sectionsList.innerHTML = '';
-            sections.forEach(section => {
-                const item = document.createElement('div');
-                item.className = 'p-3 bg-light rounded mb-3';
-                item.innerHTML = `
-                    <div class="fw-bold">${section.name}</div>
-                    <div class="text-muted small">
-                        Year ${section.year} • ${section.department} • ${section.strength} students
-                    </div>
-                `;
-                sectionsList.appendChild(item);
-            });
+        // Show section information
+        function showSectionInfo() {
+            const section = sections.find(s => s.id === selectedSection);
+            if (section) {
+                document.getElementById('info-section-name').textContent = section.name;
+                document.getElementById('info-department').textContent = section.department;
+                document.getElementById('info-year').textContent = `Year ${section.year}`;
+                document.getElementById('info-strength').textContent = section.strength;
+                document.getElementById('section-info').classList.remove('d-none');
+            }
         }
 
-        // Generate timetable
-        async function generateTimetable() {
+        // Hide section information
+        function hideSectionInfo() {
+            document.getElementById('section-info').classList.add('d-none');
+            document.getElementById('timetable-container').classList.add('d-none');
+        }
+
+        // Get subjects for a department and year
+        function getSubjectsForSection(section) {
+            let availableSubjects = subjects.filter(subject => 
+                subject.departments.includes(section.department)
+            );
+
+            // Filter subjects based on year and department
+            if (section.department === 'Computer Science') {
+                if (section.year === 1) {
+                    availableSubjects = availableSubjects.filter(s => 
+                        ['Mathematics', 'Physics', 'English', 'Java Programming', 'Environmental Science'].includes(s.name)
+                    );
+                } else {
+                    availableSubjects = availableSubjects.filter(s => 
+                        ['Data Structures', 'Python Programming', 'Database Systems', 'Operating Systems', 'Computer Networks', 'Web Development'].includes(s.name)
+                    );
+                }
+            } else if (section.department === 'Information Technology') {
+                if (section.year === 1) {
+                    availableSubjects = availableSubjects.filter(s => 
+                        ['Mathematics', 'Physics', 'English', 'Java Programming', 'Environmental Science'].includes(s.name)
+                    );
+                } else {
+                    availableSubjects = availableSubjects.filter(s => 
+                        ['Web Development', 'Database Systems', 'Computer Networks', 'Python Programming'].includes(s.name)
+                    );
+                }
+            } else if (section.department === 'Electronics') {
+                if (section.year === 1) {
+                    availableSubjects = availableSubjects.filter(s => 
+                        ['Mathematics', 'Physics', 'English', 'Environmental Science'].includes(s.name)
+                    );
+                } else {
+                    availableSubjects = availableSubjects.filter(s => 
+                        ['Digital Electronics', 'Signal Processing', 'Mathematics', 'Physics'].includes(s.name)
+                    );
+                }
+            } else if (section.department === 'Mechanical') {
+                if (section.year === 1) {
+                    availableSubjects = availableSubjects.filter(s => 
+                        ['Mathematics', 'Physics', 'English', 'Environmental Science'].includes(s.name)
+                    );
+                } else {
+                    availableSubjects = availableSubjects.filter(s => 
+                        ['Thermodynamics', 'Machine Design', 'Mathematics', 'Physics'].includes(s.name)
+                    );
+                }
+            } else if (section.department === 'Civil') {
+                if (section.year === 1) {
+                    availableSubjects = availableSubjects.filter(s => 
+                        ['Mathematics', 'Physics', 'English', 'Environmental Science'].includes(s.name)
+                    );
+                } else {
+                    availableSubjects = availableSubjects.filter(s => 
+                        ['Structural Engineering', 'Surveying', 'Mathematics', 'Physics'].includes(s.name)
+                    );
+                }
+            }
+
+            return availableSubjects;
+        }
+
+        // Get teachers for subjects
+        function getTeachersForSubjects(subjectNames) {
+            return teachers.filter(teacher => 
+                teacher.subjects.some(subject => subjectNames.includes(subject))
+            );
+        }
+
+        // Get appropriate room for subject
+        function getRoomForSubject(subject, usedRoomsForSlot = [], sectionStrength = 30) {
+            const roomType = subject.requires_lab ? 'lab' : 'lecture';
+            let availableRooms = rooms.filter(room => 
+                room.room_type === roomType && 
+                !usedRoomsForSlot.includes(room.id) &&
+                room.capacity >= sectionStrength
+            );
+            
+            if (availableRooms.length === 0) {
+                // If no rooms of preferred type, use any available room with sufficient capacity
+                availableRooms = rooms.filter(room => 
+                    !usedRoomsForSlot.includes(room.id) && 
+                    room.capacity >= sectionStrength
+                );
+            }
+            
+            if (availableRooms.length === 0) {
+                // If still no rooms, use any available room
+                availableRooms = rooms.filter(room => !usedRoomsForSlot.includes(room.id));
+            }
+            
+            return availableRooms.length > 0 ? availableRooms[Math.floor(Math.random() * availableRooms.length)] : rooms[0];
+        }
+
+        // Generate timetable for selected section
+        function generateTimetable() {
             if (!selectedSection) {
-                alert('Please select a section first');
+                alert('Please select a section first!');
                 return;
             }
 
-            const btn = document.getElementById('generate-btn');
-            btn.innerHTML = '<div class="loading-spinner border-2 border-white border-top-transparent rounded-circle me-2" style="width: 20px; height: 20px;"></div>Generating...';
-            btn.disabled = true;
-
-            // Simulate API call
-            setTimeout(() => {
-                currentTimetable = generateMockTimetable();
-                renderTimetable();
-                document.getElementById('timetable-container').classList.remove('d-none');
-                
-                btn.innerHTML = '<i class="fas fa-plus me-2"></i>Generate Timetable';
-                btn.disabled = false;
-            }, 2000);
-        }
-
-        // Generate mock timetable
-        function generateMockTimetable() {
+            const section = sections.find(s => s.id === selectedSection);
+            const sectionSubjects = getSubjectsForSection(section);
+            const sectionTeachers = getTeachersForSubjects(sectionSubjects.map(s => s.name));
+            
+            // Create new timetable
             const timetable = {};
             days.forEach(day => {
                 timetable[day] = {};
@@ -519,199 +663,257 @@
                 });
             });
 
-               const mockClasses = [
-                { day: 'Monday', period: 1, subject: 'Mathematics', teacher: 'Dr. Brijesh singh', room: 'Room 101' },
-                { day: 'Monday', period: 2, subject: 'Physics', teacher: 'Prof. Neha', room: 'Lab 201' },
-                { day: 'Monday', period: 4, subject: 'English', teacher: 'Ms. Brahmjot kaur', room: 'Room 102' },
-                { day: 'Monday', period: 5, subject: 'Data Structures', teacher: 'Ms. Navneet kaur', room: 'Room 101' },
-                { day: 'Monday', period: 6, subject: 'Python', teacher: 'Dr. Amandeep kaur', room: 'Lab 202' },
-                { day: 'Monday', period: 3, subject: 'C++', teacher: 'Dr. Manju goyal', room: 'Lab 201' },
-                { day: 'Tuesday', period: 1, subject: 'Chemistry', teacher: 'Dr. Shubham sharma', room: 'Lab 202' },
-                { day: 'Tuesday', period: 3, subject: 'Java', teacher: 'Dr. Kanchan sharma', room: 'Lab 201' },
-                { day: 'Tuesday', period: 4, subject: 'Web Development', teacher: 'Ms. Mudit', room: 'Lab 201' },
-                { day: 'Tuesday', period: 2, subject: 'Environmental Science', teacher: 'Dr. Jayishnu Singla', room: 'Room 103' },
-                { day: 'Tuesday', period: 5, subject: 'Environmental Science', teacher: 'Dr. Jayishnu Singla', room: 'Room 103' },
-                { day: 'Wednesday', period: 2, subject: 'Mathematics', teacher: 'Dr. Brijesh singh', room: 'Room 101' },
-                { day: 'Wednesday', period: 5, subject: 'Physics', teacher: 'Prof. Neha', room: 'Lab 201' },
-                { day: 'Wednesday', period: 3, subject: 'C++', teacher: 'Dr. Manju goyal', room: 'Lab 201' },
-                { day: 'Wednesday', period: 4, subject: 'Java', teacher: 'Dr. Kanchan sharma', room: 'Lab 201' },
-                { day: 'Wednesday', period: 6, subject: 'Chemistry', teacher: 'Dr. Shubham sharma', room: 'Lab 202' },
-                { day: 'Thursday', period: 1, subject: 'English', teacher: 'Ms. Brahmjot kaur', room: 'Room 102' },
-                { day: 'Thursday', period: 3, subject: 'Python', teacher: 'Dr. Amandeep kaur', room: 'Lab 202' },
-                { day: 'Thursday', period: 2, subject: 'Environmental Science', teacher: 'Dr. Jayishnu Singla', room: 'Room 103' },
-                { day: 'Thursday', period: 4, subject: 'Web Development', teacher: 'Ms. Mudit', room: 'Lab 201' },
-                { day: 'Friday', period: 1, subject: 'Data Structures', teacher: 'Ms. Navneet kaur', room: 'Room 101' },
-                { day: 'Friday', period: 2, subject: 'C++', teacher: 'Dr. Manju goyal', room: 'Lab 201' },
-                { day: 'Friday', period: 4, subject: 'Data Structures', teacher: 'Ms. Navneet kaur', room: 'Room 101' },
-                { day: 'Friday', period: 5, subject: 'Mathematics', teacher: 'Dr. Brijesh singh', room: 'Room 101' }
-
-            ];
-
-
-            mockClasses.forEach(cls => {
-                timetable[cls.day][cls.period] = {
-                    subject: cls.subject,
-                    teacher: cls.teacher,
-                    room: cls.room,
-                    is_locked: false
-                };
+            // Generate classes based on subjects and their weekly hours
+            const classesToSchedule = [];
+            
+            sectionSubjects.forEach(subject => {
+                const hoursNeeded = Math.min(subject.hours_per_week, 8); // Max 8 periods per week
+                
+                for (let i = 0; i < hoursNeeded; i++) {
+                    const availableTeachers = sectionTeachers.filter(t => t.subjects.includes(subject.name));
+                    const teacher = availableTeachers[Math.floor(Math.random() * availableTeachers.length)];
+                    
+                    if (teacher) {
+                        classesToSchedule.push({
+                            subject: subject,
+                            teacher: teacher,
+                            isLab: subject.requires_lab && (i % 2 === 0) // Alternate between theory and lab
+                        });
+                    }
+                }
             });
 
-            return timetable;
+            // Schedule classes randomly but ensure no conflicts
+            const usedSlots = new Map(); // Track used teacher-time slots
+            const usedRooms = new Map(); // Track used room-time slots
+            
+            classesToSchedule.forEach(classInfo => {
+                let scheduled = false;
+                let attempts = 0;
+                
+                while (!scheduled && attempts < 50) {
+                    const randomDay = days[Math.floor(Math.random() * days.length)];
+                    const randomPeriod = periods[Math.floor(Math.random() * periods.length)];
+                    const slotKey = `${randomDay}-${randomPeriod}`;
+                    
+                    // Check if slot is empty
+                    if (!timetable[randomDay][randomPeriod]) {
+                        // Check teacher availability
+                        const teacherKey = `${classInfo.teacher.id}-${slotKey}`;
+                        
+                        if (!usedSlots.has(teacherKey)) {
+                            // Get available room for this slot
+                            const usedRoomsForSlot = Array.from(usedRooms.keys())
+                                .filter(key => key.endsWith(`-${slotKey}`))
+                                .map(key => parseInt(key.split('-')[0]));
+                                
+                            const room = getRoomForSubject(classInfo.subject, usedRoomsForSlot, section.strength);
+                            const roomKey = `${room.id}-${slotKey}`;
+                            
+                            if (!usedRooms.has(roomKey)) {
+                                // Schedule the class
+                                timetable[randomDay][randomPeriod] = {
+                                    subject: classInfo.subject,
+                                    teacher: classInfo.teacher,
+                                    room: room,
+                                    is_locked: false,
+                                    isLab: classInfo.isLab
+                                };
+                                
+                                usedSlots.set(teacherKey, true);
+                                usedRooms.set(roomKey, true);
+                                scheduled = true;
+                            }
+                        }
+                    }
+                    attempts++;
+                }
+            });
+
+            // Store timetable for this section
+            sectionTimetables[selectedSection] = timetable;
+            currentTimetable = timetable;
+            
+            // Display the timetable
+            displayTimetable(timetable);
         }
 
-        // Render timetable
-        function renderTimetable() {
+        // Display timetable in a table format
+        function displayTimetable(timetable) {
             const container = document.getElementById('timetable-grid');
-            const selectedSectionObj = sections.find(s => s.id == selectedSection);
-            
-            // Count total classes
             let totalClasses = 0;
-            Object.values(currentTimetable).forEach(day => {
-                totalClasses += Object.values(day).filter(period => period !== null).length;
+            
+            // Count total scheduled classes
+            days.forEach(day => {
+                periods.forEach(period => {
+                    if (timetable[day] && timetable[day][period]) {
+                        totalClasses++;
+                    }
+                });
             });
+            
             document.getElementById('total-classes').textContent = totalClasses;
+            
+            let html = `
+                <div class="table-responsive">
+                    <table class="table table-bordered timetable-table">
+                        <thead>
+                            <tr>
+                                <th class="time-cell">Time</th>
+                                ${days.map(day => `<th class="day-header">${day}</th>`).join('')}
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+            
+            periods.forEach((period, index) => {
+                html += `<tr>`;
+                html += `<td class="time-cell">Period ${period}<br><small>${timeSlots[index]}</small></td>`;
+                
+                days.forEach(day => {
+                    const classData = timetable[day] ? timetable[day][period] : null;
+                    
+                    if (classData) {
+                        html += `
+                            <td>
+                                <div class="class-card subject-card ${classData.is_locked ? 'locked' : ''}">
+                                    <div class="subject-name">${classData.subject.name}</div>
+                                    <div class="teacher-name">${classData.teacher.name}</div>
+                                    <div class="room-name">${classData.room.name}</div>
+                                    ${classData.isLab ? '<small class="badge bg-info">Lab</small>' : ''}
+                                </div>
+                            </td>
+                        `;
+                    } else {
+                        html += `<td><div class="empty-slot">Free</div></td>`;
+                    }
+                });
+                
+                html += `</tr>`;
+            });
+            
+            html += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            
+            container.innerHTML = html;
+            document.getElementById('timetable-container').classList.remove('d-none');
+        }
 
-            container.innerHTML = `
-                <div class="card shadow-lg">
-                    <div class="card-header timetable-header">
-                        <div class="d-flex justify-content-between align-items-center flex-wrap">
-                            <h4 class="mb-0">
-                                <i class="fas fa-calendar-alt me-2"></i>
-                                Timetable - ${selectedSectionObj ? selectedSectionObj.name : 'Unknown Section'}
-                            </h4>
-                            <div class="d-flex gap-2 flex-wrap">
-                                <button class="btn btn-light btn-sm" onclick="toggleEditMode()">
-                                    <i class="fas fa-edit me-1"></i>${editMode ? 'Save' : 'Edit'}
-                                </button>
-                                <button class="btn btn-light btn-sm" onclick="exportToPDF()">
-                                    <i class="fas fa-file-pdf me-1"></i>PDF
-                                </button>
-                                <button class="btn btn-light btn-sm" onclick="exportToCSV()">
-                                    <i class="fas fa-download me-1"></i>CSV
-                                </button>
+        // Render data lists in the data management tab
+        function renderDataLists() {
+            renderSubjectsList();
+            renderTeachersList();
+            renderRoomsList();
+            renderSectionsList();
+        }
+
+        function renderSubjectsList() {
+            const container = document.getElementById('subjects-list');
+            let html = '';
+            
+            subjects.forEach(subject => {
+                html += `
+                    <div class="card mb-2">
+                        <div class="card-body py-2">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>${subject.name}</strong> (${subject.code})
+                                    <br><small class="text-muted">${subject.hours_per_week} hrs/week • ${subject.requires_lab ? 'Lab Required' : 'Theory Only'}</small>
+                                </div>
+                                <div class="text-end">
+                                    <small class="text-muted">${subject.departments.join(', ')}</small>
+                                </div>
                             </div>
                         </div>
                     </div>
-                    <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table table-bordered mb-0">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th class="period-cell">Period</th>
-                                        ${days.map(day => `<th class="text-center" style="min-width: 200px;">${day}</th>`).join('')}
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    ${periods.map(period => `
-                                        <tr>
-                                            <td class="period-cell">
-                                                <i class="fas fa-clock me-2 text-muted"></i>
-                                                Period ${period}
-                                            </td>
-                                            ${days.map(day => `
-                                                <td class="p-2" 
-                                                    ondragover="${editMode ? 'allowDrop(event)' : ''}" 
-                                                    ondrop="${editMode ? `drop(event, '${day}', ${period})` : ''}">
-                                                    ${renderTimetableCell(day, period)}
-                                                </td>
-                                            `).join('')}
-                                        </tr>
-                                    `).join('')}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            `;
+                `;
+            });
+            
+            container.innerHTML = html;
         }
 
-        // Render individual timetable cell
-        function renderTimetableCell(day, period) {
-            const classData = currentTimetable[day]?.[period];
+        function renderTeachersList() {
+            const container = document.getElementById('teachers-list');
+            let html = '';
             
-            if (classData) {
-                return `
-                    <div class="class-card p-3 ${classData.is_locked ? 'locked' : ''}" 
-                         draggable="${editMode}" 
-                         ondragstart="${editMode ? `drag(event, '${day}', ${period})` : ''}">
-                        <div class="fw-bold text-dark mb-1">${classData.subject}</div>
-                        <div class="text-muted small d-flex align-items-center mb-1">
-                            <i class="fas fa-user me-1"></i>${classData.teacher}
+            teachers.forEach(teacher => {
+                html += `
+                    <div class="card mb-2">
+                        <div class="card-body py-2">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>${teacher.name}</strong>
+                                    <br><small class="text-muted">${teacher.department}</small>
+                                </div>
+                                <div class="text-end">
+                                    <small class="text-muted">${teacher.subjects.join(', ')}</small>
+                                </div>
+                            </div>
                         </div>
-                        <div class="text-muted small d-flex align-items-center">
-                            <i class="fas fa-map-marker-alt me-1"></i>${classData.room}
-                        </div>
-                        ${classData.is_locked ? '<div class="text-warning small mt-1"><i class="fas fa-lock me-1"></i>Locked</div>' : ''}
                     </div>
                 `;
-            } else {
-                return `
-                    <div class="empty-slot">
-                        ${editMode ? 'Drop here' : 'Free'}
+            });
+            
+            container.innerHTML = html;
+        }
+
+        function renderRoomsList() {
+            const container = document.getElementById('rooms-list');
+            let html = '';
+            
+            rooms.forEach(room => {
+                html += `
+                    <div class="card mb-2">
+                        <div class="card-body py-2">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>${room.name}</strong>
+                                    <br><small class="text-muted">Building ${room.building} • Capacity: ${room.capacity}</small>
+                                </div>
+                                <div class="text-end">
+                                    <span class="badge bg-${room.room_type === 'lab' ? 'warning' : room.room_type === 'seminar' ? 'info' : 'primary'}">${room.room_type}</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 `;
-            }
-        }
-
-        // Drag and drop functions
-        function allowDrop(ev) {
-            ev.preventDefault();
-            ev.currentTarget.classList.add('dragover');
-        }
-
-        function drag(ev, day, period) {
-            draggedItem = {
-                ...currentTimetable[day][period],
-                oldDay: day,
-                oldPeriod: period
-            };
-            ev.dataTransfer.effectAllowed = 'move';
-        }
-
-        function drop(ev, day, period) {
-            ev.preventDefault();
-            ev.currentTarget.classList.remove('dragover');
+            });
             
-            if (!draggedItem || !editMode) return;
-
-            // Remove from old position
-            if (draggedItem.oldDay && draggedItem.oldPeriod) {
-                currentTimetable[draggedItem.oldDay][draggedItem.oldPeriod] = null;
-            }
-
-            // Add to new position
-            currentTimetable[day][period] = {
-                subject: draggedItem.subject,
-                teacher: draggedItem.teacher,
-                room: draggedItem.room,
-                is_locked: true
-            };
-
-            draggedItem = null;
-            renderTimetable();
+            container.innerHTML = html;
         }
 
-        // Toggle edit mode
-        function toggleEditMode() {
-            editMode = !editMode;
-            renderTimetable();
+        function renderSectionsList() {
+            const container = document.getElementById('sections-list');
+            let html = '';
+            
+            sections.forEach(section => {
+                html += `
+                    <div class="card mb-2">
+                        <div class="card-body py-2">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>${section.name}</strong>
+                                    <br><small class="text-muted">${section.department} • Year ${section.year}</small>
+                                </div>
+                                <div class="text-end">
+                                    <small class="text-muted">${section.strength} students</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
         }
 
-        // Export functions
-        function exportToPDF() {
-            alert('Exporting to PDF...');
-        }
-
-        function exportToCSV() {
-            alert('Exporting to CSV...');
-        }
-
-        // Initialize on page load
+        // Initialize the application
         document.addEventListener('DOMContentLoaded', function() {
             initializeSampleData();
         });
     </script>
 </body>
-
 </html>
